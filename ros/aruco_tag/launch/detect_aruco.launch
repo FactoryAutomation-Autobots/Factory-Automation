@@ -1,0 +1,5 @@
+
+<launch>
+    <!-- TODO: use rospy to get images from a topic, and to publish some information about location -->
+    <node pkg="aruco_tag" name="detect_aruco" type="detectArUco.py" output="screen"/>
+</launch>
