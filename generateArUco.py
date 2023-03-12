@@ -25,20 +25,21 @@ ARUCO_DICT = {
 	"DICT_APRILTAG_36h11": cv2.aruco.DICT_APRILTAG_36h11
 }
 
-aruco_type = "DICT_5X5_250"
-id = 1
+aruco_type = "DICT_4X4_100"
 
 arucoDict = cv2.aruco.getPredefinedDictionary(ARUCO_DICT[aruco_type])
-
-print("ArUCo type '{}' with ID '{}'".format(aruco_type, id))
 tag_size = 1000
-tag = np.zeros((tag_size, tag_size, 1), dtype="uint8")
-cv2.aruco.generateImageMarker(arucoDict, id, tag_size, tag, 1)
 
-# Save the tag g
-# enerated
-tag_name = "ArUco Tags/" + aruco_type + "_" + str(id) + ".png"
-cv2.imwrite(tag_name, tag)
+for id in range(4):
+	print("ArUCo type '{}' with ID '{}'".format(aruco_type, id))
+	tag = np.zeros((tag_size, tag_size, 1), dtype="uint8")
+	marker_image = cv2.aruco.drawMarker(arucoDict, id, tag_size)
+
+	# Save the tag g
+	# enerated
+	tag_name = "ArUco Tags/" + aruco_type + "_" + str(id) + ".png"
+	cv2.imwrite(tag_name, tag)
+
 cv2.imshow("ArUCo Tag", tag)
 
 cv2.waitKey(0)

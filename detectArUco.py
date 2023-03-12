@@ -1,96 +1,67 @@
-import numpy as np
-import time
+import rospy
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
+from geometry_msgs.msg import Twist
 import cv2
+import numpy as np
+import math
 
+class ArUcoDetector:
+    def __init__(self):
+        rospy.init_node('aruco_detector', anonymous=True)
+        self.bridge = CvBridge()
+        self.image_sub = rospy.Subscriber('/camera/rgb/image_raw', Image, self.image_callback)
+        self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.marker_size = 0.05  # size of the ArUco tag in meters
+        self.tag_detected = False
 
-ARUCO_DICT = {
-	"DICT_4X4_50": cv2.aruco.DICT_4X4_50,
-	"DICT_4X4_100": cv2.aruco.DICT_4X4_100,
-	"DICT_4X4_250": cv2.aruco.DICT_4X4_250,
-	"DICT_4X4_1000": cv2.aruco.DICT_4X4_1000,
-	"DICT_5X5_50": cv2.aruco.DICT_5X5_50,
-	"DICT_5X5_100": cv2.aruco.DICT_5X5_100,
-	"DICT_5X5_250": cv2.aruco.DICT_5X5_250,
-	"DICT_5X5_1000": cv2.aruco.DICT_5X5_1000,
-	"DICT_6X6_50": cv2.aruco.DICT_6X6_50,
-	"DICT_6X6_100": cv2.aruco.DICT_6X6_100,
-	"DICT_6X6_250": cv2.aruco.DICT_6X6_250,
-	"DICT_6X6_1000": cv2.aruco.DICT_6X6_1000,
-	"DICT_7X7_50": cv2.aruco.DICT_7X7_50,
-	"DICT_7X7_100": cv2.aruco.DICT_7X7_100,
-	"DICT_7X7_250": cv2.aruco.DICT_7X7_250,
-	"DICT_7X7_1000": cv2.aruco.DICT_7X7_1000,
-	"DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
-	"DICT_APRILTAG_16h5": cv2.aruco.DICT_APRILTAG_16h5,
-	"DICT_APRILTAG_25h9": cv2.aruco.DICT_APRILTAG_25h9,
-	"DICT_APRILTAG_36h10": cv2.aruco.DICT_APRILTAG_36h10,
-	"DICT_APRILTAG_36h11": cv2.aruco.DICT_APRILTAG_36h11
-}
+    def image_callback(self, data):
+        cv_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
+        gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+        aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_100)
+        parameters = cv2.aruco.DetectorParameters()
+        corners, ids, rejected_image_points = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+        if ids is not None:
+            self.tag_detected = True
+            for i, id in enumerate(ids):
+                if id == 0:  # move forward
+                    cmd_vel_msg = Twist()
+                    cmd_vel_msg.linear.x = 0.1
+                    self.cmd_vel_pub.publish(cmd_vel_msg)
+                    rospy.sleep(10)  # move for 10 seconds
+                    cmd_vel_msg.linear.x = 0.0  # stop moving
+                    self.cmd_vel_pub.publish(cmd_vel_msg)
+                elif id == 1:  # turn left
+                    cmd_vel_msg = Twist()
+                    cmd_vel_msg.angular.z = 0.5
+                    self.cmd_vel_pub.publish(cmd_vel_msg)
+                    rospy.sleep(math.pi)  # move for 10 seconds
+                    cmd_vel_msg.linear.x = 0.0  # stop moving
+                    self.cmd_vel_pub.publish(cmd_vel_msg)
+                elif id == 2:  # turn right
+                    cmd_vel_msg = Twist()
+                    cmd_vel_msg.angular.z = -0.5
+                    self.cmd_vel_pub.publish(cmd_vel_msg)
+                    rospy.sleep(math.pi)  # move for 10 seconds
+                    cmd_vel_msg.linear.x = 0.0  # stop moving
+                    self.cmd_vel_pub.publish(cmd_vel_msg)
+                elif id == 3:  # move backward
+                    cmd_vel_msg = Twist()
+                    cmd_vel_msg.linear.x = -0.1
+                    self.cmd_vel_pub.publish(cmd_vel_msg)
+                    rospy.sleep(5)  # move for 10 seconds
+                    cmd_vel_msg.linear.x = 0.0  # stop moving
+                    self.cmd_vel_pub.publish(cmd_vel_msg)
+        else:
+            if not self.tag_detected:  # no tag detected yet, move randomly
+                cmd_vel_msg = Twist()
+                cmd_vel_msg.linear.x = 0.2
+                cmd_vel_msg.angular.z = np.random.uniform(-1, 1)
+                self.cmd_vel_pub.publish(cmd_vel_msg)
 
-
-def aruco_display(corners, ids, rejected, image):
-	if len(corners) > 0:
-		
-		ids = ids.flatten()
-		
-		for (markerCorner, markerID) in zip(corners, ids):
-			
-			corners = markerCorner.reshape((4, 2))
-			(topLeft, topRight, bottomRight, bottomLeft) = corners
-			
-			topRight = (int(topRight[0]), int(topRight[1]))
-			bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
-			bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
-			topLeft = (int(topLeft[0]), int(topLeft[1]))
-
-			cv2.line(image, topLeft, topRight, (0, 255, 0), 2)
-			cv2.line(image, topRight, bottomRight, (0, 255, 0), 2)
-			cv2.line(image, bottomRight, bottomLeft, (0, 255, 0), 2)
-			cv2.line(image, bottomLeft, topLeft, (0, 255, 0), 2)
-			
-			cX = int((topLeft[0] + bottomRight[0]) / 2.0)
-			cY = int((topLeft[1] + bottomRight[1]) / 2.0)
-			cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
-			
-			cv2.putText(image, str(markerID),(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
-				0.5, (0, 255, 0), 2)
-			print("[Inference] ArUco marker ID: {}".format(markerID))
-			
-	return image
-
-
-aruco_type = "DICT_5X5_100"
-
-arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
-
-arucoParams = cv2.aruco.DetectorParameters_create()
-
-
-cap = cv2.VideoCapture(0)
-
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-
-
-while cap.isOpened():
-    
-	ret, img = cap.read()
-
-	h, w, _ = img.shape
-
-	width = 1000
-	height = int(width*(h/w))
-	img = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
- 
-	corners, ids, rejected = cv2.aruco.detectMarkers(img, arucoDict, parameters=arucoParams)
-
-	detected_markers = aruco_display(corners, ids, rejected, img)
-
-	cv2.imshow("Image", detected_markers)
-
-	key = cv2.waitKey(1) & 0xFF
-	if key == ord("q"):
-	    break
-
-cv2.destroyAllWindows()
-cap.release()
+if __name__ == '__main__':
+	try:
+		ArUcoDetector()
+		rospy.spin()
+	except rospy.ROSInterruptException:
+		rospy.loginfo("Exception thrown")
