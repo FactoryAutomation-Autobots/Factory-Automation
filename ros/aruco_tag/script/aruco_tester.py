@@ -6,6 +6,9 @@ from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
 from aruco_msgs.msg import MarkerArray
 
+ # Initialize publisher to control the TurtleBot's movement
+velocity_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+
 # def aruco_display(corners, ids, rejected, image):
 # 	if len(corners) > 0:
 
@@ -36,17 +39,17 @@ from aruco_msgs.msg import MarkerArray
 
 # 	return image
 
-def image_callback(data, bridge):
-    # Convert the ROS image to an OpenCV image
-    cv_image = bridge.imgmsg_to_cv2(data, "bgr8")
-    
-    # Display the image (optional)
+# Method to convert the ROS image to an OpenCV image and display
+def rosimage_to_cvimage(image_data, bridge):
+    cv_image = bridge.imgmsg_to_cv2(image_data, "bgr8")
+    # Display the image
     cv2.imshow("Image window", cv_image)
     cv2.waitKey(3)
 
-def tag_callback(data, velocity_publisher):
+# Method to detect the aruco markers and call movement methods depending on aruco id
+def tag_detection(image_data, velocity_publisher):
     # Loop through all detected tags
-    for marker in data.markers:
+    for marker in image_data.markers:
         # Calculate the distance to the tag based on its size in the image
         distance = 1.0 / marker.confidence
         # Check if the tag has the desired ID
@@ -136,19 +139,17 @@ def main():
     rospy.init_node('aruco_detection', anonymous=True)
     # Initialize CV bridge to convert ROS images to OpenCV images
     bridge = CvBridge()
-    # Initialize publisher to control the TurtleBot's movement
-    velocity_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
     # Initialize subscriber to receive images from the TurtleBot's camera
-    image_subscriber = rospy.Subscriber('/camera/rgb/image_raw', Image, image_callback, bridge)
+    image_subscriber = rospy.Subscriber('/camera/rgb/image_raw', Image, rosimage_to_cvimage, bridge)
     # Initialize subscriber to receive ArUco tag messages
-    tag_subscriber = rospy.Subscriber('/aruco_marker_publisher/markers', MarkerArray, tag_callback, velocity_publisher)
+    tag_subscriber = rospy.Subscriber('/aruco_marker_publisher/markers', MarkerArray, tag_detection, velocity_publisher)
     # Start the main ROS loop
     rospy.spin()
-    # Close the OpenCV windows (optional)
-    cv2.destroyAllWindows()
+
+def shutdown():
+    rospy.logininfo("Stopping Turtlebot: - Node Shutdown")
+    velocity_publisher.publish(Twist())
 
 if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-	    rospy.loginfo("Exception thrown")
+    rospy.on_shutdown(shutdown)
+    main()
