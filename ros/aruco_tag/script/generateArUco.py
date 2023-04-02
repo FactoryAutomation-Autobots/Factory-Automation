@@ -30,10 +30,10 @@ aruco_type = "DICT_4X4_100"
 arucoDict = cv2.aruco.getPredefinedDictionary(ARUCO_DICT[aruco_type])
 tag_size = 1000
 
-for id in range(4):
+for id in range(3):
 	print("ArUCo type '{}' with ID '{}'".format(aruco_type, id))
 	tag = np.zeros((tag_size, tag_size, 1), dtype="uint8")
-	marker_image = cv2.aruco.drawMarker(arucoDict, id, tag_size)
+	cv2.aruco.generateImageMarker(arucoDict, id, tag_size, tag, 1)
 
 	# Save the tag g
 	# enerated

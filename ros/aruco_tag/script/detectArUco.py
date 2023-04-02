@@ -28,7 +28,7 @@ class ArUcoDetector:
                     cmd_vel_msg = Twist()
                     cmd_vel_msg.linear.x = 0.1
                     self.cmd_vel_pub.publish(cmd_vel_msg)
-                    rospy.sleep(10)  # move for 10 seconds
+                    rospy.sleep(5)  # move for 10 seconds
                     cmd_vel_msg.linear.x = 0.0  # stop moving
                     self.cmd_vel_pub.publish(cmd_vel_msg)
                 elif id == 1:  # turn left
