@@ -17,6 +17,28 @@ detected_tags = []
 # data will be a 16-bit int
 def aruco_detection_callback(data):
     detected_tags.add(data)
+
+def process_tags():
+    while not rospy.is_shutdown():
+        if len(detected_tags) != 0:
+            call_movement_function(detected_tags.pop(0))
+        # This will check for a new tag 10 times every second (if it is not already processing tags). If it is processing tags, it will take however long
+        # the given movement command takes to execute before checking again. This may not be the best implementation if we don't want a queue-style behavior
+        rospy.rate.sleep(100)
+
+# helper method that manages the functionality attached to each aruco tag id
+def call_movement_function(tag_id):
+    if id == 0:  # move forward
+        move_forward(1.0, velocity_publisher)
+    elif id == 1:  # turn left
+        turn_left(1.0, velocity_publisher)
+    elif id == 2:  # turn right
+        turn_right(1.0, velocity_publisher)
+    elif id == 3:  # move backward
+        move_backward(1.0, velocity_publisher)
+    else
+        # informs the user if a tag_id with an unkown (or not yet implemented) action is being processed. Nothing will happen other than the message
+        rospy.logInfo('The tag_id does not correspond to a currently supported action! Tag id: %d',%(tag_id))
     
 def move_forward(distance_to_move, velocity_publisher):
     # Create a Twist message to control the TurtleBot's movement
@@ -90,4 +112,6 @@ if __name__ == '__main__':
     rospy.init_node('movement_tester', anonymous=True)
     rospy.on_shutdown(shutdown)
     move_forward(1.0,velocity_publisher)
+    # makes the initial call to the main looping method in this inline script, the process_tags method, which runs until the node shuts down
+    process_tags()
    
