@@ -7,7 +7,7 @@ from std_msgs.msg import int16
 # Initialize publisher to control the TurtleBot's movement
 velocity_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 # Creates a subscriber that recieves an int16 (simple message from the std_msgs package that contains one 16-bit int, which is all that is needed)
-aruco_detect_subscriber = rospy.Subscriber('aruco_detections', int16, aruco_detection_callback)
+aruco_detect_subscriber = rospy.Subscriber('/aruco_detections', int16, aruco_detection_callback)
 # defines and initializes an empty list that will store the detected tags that have not yet been handled. I assume that we will want to effectively treat it as
 # a queue and add and remove things in first-in first-out (FIFO) order.
 detected_tags = []
