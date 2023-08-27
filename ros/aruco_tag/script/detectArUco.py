@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import math
 
-class ArUcoDetector:
+class ArUcoDetector():
     def __init__(self):
         rospy.init_node('aruco_detector', anonymous=True)
         self.bridge = CvBridge()
